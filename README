@@ -1,0 +1,61 @@
+This is the bake build system.
+
+When you type "bake" at the command prompt to build a program using
+the bake build system, bake looks for a file in the current directory
+called Bakefile.  Each line of the Bakefile is interpreted as a
+command, and each command is invoked in sequence.
+
+The standard output of each command is expected to be a list of lines
+describing the dependency tree of the program to be built, in the
+format described in the next paragraph.  The dependency tree generated
+by each previous command is given to each subsequent command in the
+Bakefile on standard input in the same format, but it will often be
+the case that there will only be one line in a Bakefile.
+
+Each line of the standard output must be in one of two formats.  It
+must either assert that file B depends on file A, and must be rebuilt
+if file A was modified later than file B was modified:
+
+A / B
+
+or it must describe how file A must be built if, based on its
+dependencies, bake determines it is out of date:
+
+A.o gcc -c A.cpp
+
+Here's an example of the dependency tree for a simple program
+containing files hello.hpp, hello.cpp, and the object file hello.o
+and the executable hello.  hello.cpp #includes hello.hpp and so must
+be rebuilt if it changes.
+
+hello.hpp / hello.cpp
+hello.cpp / hello.o
+hello.o / hello
+hello.cpp touch hello.cpp
+hello.o gcc -c hello.cpp
+hello gcc -o hello hello.o
+
+You can use the shell command "echo" to just dump such a tree to
+standard output, or you can use a program of arbitrary sophistication,
+written in an arbitrary language, to scan the current and any other
+appropriate directories for source and object files and discover the
+appropriate dependency tree on the fly.  For instance, my own programs
+that use bake typically have a Python program baker.py that
+auto-generates the appropriate dependency tree by, among other things,
+scanning .cpp and .hpp files for lines starting with #include to
+determine which header files they depend on.
+
+This works really well, because I only have to discover which header
+files a .cpp or .hpp file directly includes, because bake can handle
+transitive dependencies perfectly fine.  So, if hello.cpp includes
+hello.hpp, and hello.hpp includes whatever.hpp, the dependency tree
+might look like this:
+
+hello.hpp / hello.cpp
+whatever.hpp / hello.hpp
+hello.hpp touch hello.hpp
+hello.cpp touch hello.cpp
+hello.o gcc -c hello.cpp
+hello gcc -o hello hello.o
+
+And everything will get rebuilt if whatever.hpp changes, as it must.

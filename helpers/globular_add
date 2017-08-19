@@ -1,0 +1,69 @@
+#! /usr/bin/env python
+
+#Usage: globular_add *.source -> *.object "command" "python-file-defining-command-transformer"
+
+import sys
+import os
+
+#We don't need to care about input
+for line in sys.stdin:
+    pass
+
+#Check our arguments
+if len(sys.argv) < 5 or len(sys.argv) > 6:
+    sys.exit(1)
+
+#Process arguments
+ONE_ONE=1
+ONE_MANY=2
+MANY_ONE=3
+MANY_MANY=4
+if sys.argv[1][0]=='*' and sys.argv[3][0]=='*':
+    mode=MANY_MANY
+elif sys.argv[1][0]=='*':
+    mode=MANY_ONE
+elif sys.argv[3][0]=='*':
+    mode=ONE_MANY
+else:
+    mode=ONE_ONE
+
+#Default glob_cmd_transform (appends source filename and "-o object_filename" to command)
+def glob_cmd_transform(to_transform,source_filename,object_filename):
+    if to_transform=="" or to_transform==" ":
+        return ""
+    return to_transform+" "+source_filename+" -o "+object_filename
+
+if len(sys.argv) == 6:
+    exec(open(sys.argv[5]).read())
+
+files=os.listdir(".")
+
+if mode==MANY_MANY:
+    source_suffix=sys.argv[1][1:]
+    obj_suffix=sys.argv[3][1:]
+    for filename in files:
+        if filename.rfind(source_suffix)+len(source_suffix)==len(filename):
+            obj_file=filename[:filename.rfind(source_suffix)]+obj_suffix
+            print filename+" / "+obj_file
+            if glob_cmd_transform(sys.argv[4],filename,obj_file)!="":
+                print obj_file+" "+glob_cmd_transform(sys.argv[4],filename,obj_file)
+elif mode==MANY_ONE:
+    source_suffix=sys.argv[1][1:]
+    source_files=""
+    for filename in files:
+        if filename.rfind(source_suffix)+len(source_suffix)==len(filename):
+            print filename+" / "+sys.argv[3]
+            source_files=source_files+filename+" "
+    if source_files!="" and glob_cmd_transform(sys.argv[4],source_files,sys.argv[3])!="":
+        print sys.argv[3]+" "+glob_cmd_transform(sys.argv[4],source_files,sys.argv[3])
+elif mode==ONE_MANY:
+    obj_suffix=sys.argv[3][1:]
+    for filename in files:
+        if filename.rfind(obj_suffix)+len(obj_suffix)==len(filename):
+            print sys.argv[1]+" / "+filename
+            if glob_cmd_transform(sys.argv[4],sys.argv[1],filename)!="":
+                print filename+" "+glob_cmd_transform(sys.argv[4],sys.argv[1],filename)
+else:
+    print sys.argv[1]+" / "+sys.argv[3]
+    if glob_cmd_transform(sys.argv[4],sys.argv[1],sys.argv[3])!="":
+        print sys.argv[3]+" "+glob_cmd_transform(sys.argv[4],sys.argv[1],sys.argv[3])

@@ -1,0 +1,1 @@
+g++ -std=gnu++11 -O2 StringFunctions.cpp bake.cpp bake_utilities.cpp bakelib.cpp deplib.cpp -o bake

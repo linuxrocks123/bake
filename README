@@ -59,3 +59,7 @@ hello.o gcc -c hello.cpp
 hello gcc -o hello hello.o
 
 And everything will get rebuilt if whatever.hpp changes, as it must.
+
+See https://github.com/linuxrocks123/pasithea and, in particular, its
+baker.py, for a real-world example of the type of program you can use
+to make these dependency graphs.

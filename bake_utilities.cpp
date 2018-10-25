@@ -117,6 +117,7 @@ namespace bake_utilities
 
      //Function for use as DepSystem callback.
      //Executes string value symval as command using exec, waits on it, and throws an exception if the command exited with error.  Also uses stat() to check that the file symname has been built successfully (and that the modification time has changed to near the present).
+     queue<tuple<string,pid_t,time_t>> wait_queue;
      static void dep_callback(string symname, string symval)
      {
           //Throw exception immediately if symval is the empty string
@@ -125,19 +126,8 @@ namespace bake_utilities
 
           time_t before_build = time(NULL);
           pair<int,pid_t> build_result = bakery_execute(symval);
-          siginfo_t child_status;
-          waitid(P_PID,build_result.second,&child_status,WEXITED);
+          wait_queue.push(make_tuple(symname,build_result.second,before_build));
           close(build_result.first); //we'll never need this
-          if(child_status.si_code!=CLD_EXITED || child_status.si_status!=0)
-               throw StringFunctions::permanent_c_str(symname+": build failure.");
-
-          //Okay, build exited normally.  Check if file modified.
-          /*Note: If this behavior is found to sometimes be undesirable, perhaps a global option could disable it.
-                  Then again, if this behavior is found by someone to be undesirable, perhaps that person is doing it wrong.*/
-          struct stat status;
-          stat(symname.c_str(),&status);
-          if(status.st_mtime < before_build)
-               throw StringFunctions::permanent_c_str(symname+": build appeared to complete successfully but did not modify file.");
      }
 
      void augment_depsystem(istream& din, DepSystem& to_construct, function<string(string)> mutator) throw(const char*)

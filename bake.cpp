@@ -165,14 +165,53 @@ try {
           }
 
           //Actually execute build plan
+          vector<string> symbols_remaining;
           if(target!="")
-               dep_tree.build_symbol(target);
+               symbols_remaining = dep_tree.get_build_plan(target);
           else
-               for(const string& symname : dep_tree.get_symbols())
-                    dep_tree.build_symbol(symname);
+               symbols_remaining = dep_tree.get_symbols();
+
+          while(symbols_remaining.size())
+          {
+               DepSystem temp_deptree = dep_tree;
+               for(auto i = symbols_remaining.begin(); i!=symbols_remaining.end();)
+               {
+                    vector<string> build_plan = temp_deptree.get_build_plan(*i);
+                    if(build_plan.size()==1)
+                         dep_tree.build_symbol(*i);
+                    if(build_plan.size()==0)
+                         i = symbols_remaining.erase(i);
+                    else
+                         ++i;
+               }
+
+               while(bake_utilities::wait_queue.size())
+               {
+                    tuple<string,pid_t,time_t> build_result = bake_utilities::wait_queue.front();
+                    string& symname = std::get<0>(build_result);
+                    pid_t& child_pid = std::get<1>(build_result);
+                    time_t& before_build = std::get<2>(build_result);
+                    bake_utilities::wait_queue.pop();
+
+                    siginfo_t child_status;
+                    waitid(P_PID,child_pid,&child_status,WEXITED);
+                    if(child_status.si_code!=CLD_EXITED || child_status.si_status!=0)
+                         throw StringFunctions::permanent_c_str(symname+": build failure.");
+               
+                    //Okay, build exited normally.  Check if file modified.
+                    /*Note: If this behavior is found to sometimes be undesirable, perhaps a global option could disable it.
+                      Then again, if this behavior is found by someone to be undesirable, perhaps that person is doing it wrong.*/
+                    struct stat status;
+                    stat(symname.c_str(),&status);
+                    if(status.st_mtime < before_build)
+                         throw StringFunctions::permanent_c_str(symname+": build appeared to complete successfully but did not modify file.");
+               }
+          }
      }
      else //We were invoked with -sub, so output dep_tree to handler
      {
+          //TODO: need to parrot back anything from standard in unmodified, right?
+          
           auto output_mutator = [&subdir](string symname) noexcept
           {
                if(symname.find("../")==0)

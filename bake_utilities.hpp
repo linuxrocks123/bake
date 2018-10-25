@@ -2,12 +2,18 @@
 #define BAKE_UTILITIES_HPP
 
 #include "deplib.hpp"
+#include <queue>
+#include <tuple>
 #include <utility>
 
 using std::pair;
+using std::queue;
+using std::tuple;
 
 namespace bake_utilities
 {
+     extern queue<tuple<string,pid_t,time_t>> wait_queue;
+
      //Should only be needed by Baker.
      /*Given input stream, returns possibly multiline string containing the next command present in this stream.  Throws exception for the following conditions:
        1. Invalid backslash escape.
